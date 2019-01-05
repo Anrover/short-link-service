@@ -30,10 +30,10 @@ public class LinkController {
         if (validUrl != null) {
             String shortLink;
             do {
-                shortLink = randomString.nextString();
+                shortLink = "/l/" + randomString.nextString();
             } while (storage.contains(shortLink));
             storage.putLink(new Link(validUrl, shortLink));
-            return ResponseEntity.ok(Collections.singletonMap("link", "/l/" + shortLink));
+            return ResponseEntity.ok(Collections.singletonMap("link", shortLink));
         }
         else
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("bad url");
@@ -41,7 +41,7 @@ public class LinkController {
 
     @RequestMapping(method=RequestMethod.GET, path = "/l/{shortLink}")
     public ResponseEntity redirectLink(@PathVariable String shortLink) {
-        Link link = storage.getLink(shortLink);
+        Link link = storage.getLink("/l/" + shortLink);
         if (link == null)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("bad short link");
         else {
@@ -56,7 +56,7 @@ public class LinkController {
 
     @RequestMapping(method=RequestMethod.GET, path = "/stats/{shortLink}")//, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity getStats(@PathVariable String shortLink) {
-        RankedLink link = storage.getLinkStats(shortLink);
+        RankedLink link = storage.getLinkStats("/l/" + shortLink);
         if (link == null)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("bad short link");
         else
