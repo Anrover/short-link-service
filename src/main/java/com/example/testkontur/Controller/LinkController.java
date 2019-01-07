@@ -2,9 +2,9 @@ package com.example.testkontur.Controller;
 
 import java.net.URI;
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.example.testkontur.Entity.Link;
+import com.example.testkontur.Entity.SimpleLink;
 import com.example.testkontur.LinkStorage;
 import com.example.testkontur.RandomString;
 import com.example.testkontur.Entity.RankedLink;
@@ -17,22 +17,21 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class LinkController {
-    private static final String template = "Hello, %s!";
-    private final AtomicLong counter = new AtomicLong();
     private static final int lenShortLink = 7;
     private static final RandomString randomString = new RandomString(lenShortLink);
     @Autowired
     private LinkStorage storage;
 
-    @RequestMapping(method=RequestMethod.GET, path = "/generate")//, produces = MediaType.APPLICATION_JSON_VALUE)// change to Post
-    public ResponseEntity getShortLink(@RequestParam(value="original") String originLink) {
-        String validUrl = UrlValidator.getValidUrlIfPossible(originLink).orElse(null);
+    @RequestMapping(method=RequestMethod.POST, path = "/generate")//, produces = MediaType.APPLICATION_JSON_VALUE)// change to Post
+    //public ResponseEntity getShortLink(@RequestParam(value="original") String originLink) {
+        public ResponseEntity getShortLink(@RequestBody SimpleLink link) {
+        String validUrl = UrlValidator.getValidUrlIfPossible(link.getOriginal()).orElse(null);
         if (validUrl != null) {
             String shortLink;
             do {
                 shortLink = "/l/" + randomString.nextString();
             } while (storage.contains(shortLink));
-            storage.putLink(new Link(validUrl, shortLink));
+            storage.createNewLink(validUrl, shortLink);
             return ResponseEntity.ok(Collections.singletonMap("link", shortLink));
         }
         else
@@ -45,8 +44,7 @@ public class LinkController {
         if (link == null)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("bad short link");
         else {
-            link.setCountRequests(link.getCountRequests() + 1);
-            storage.updateLink(link);
+            storage.updateLink(link, link.getCountRequests() + 1);
             String originLink = link.getOriginLink();
             HttpHeaders headers = new HttpHeaders();
             headers.setLocation(URI.create(originLink));

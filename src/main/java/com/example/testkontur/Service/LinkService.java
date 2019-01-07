@@ -1,6 +1,6 @@
 package com.example.testkontur.Service;
 
-import com.example.testkontur.Entity.Link;
+import com.example.testkontur.Entity.MLink;
 import com.example.testkontur.Entity.RankedLink;
 import com.example.testkontur.Repository.LinkRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,37 +17,38 @@ public class LinkService {
         this.linkRepository = linkRepository;
     }
 
-    public void createLink(Link link) {
+    public void createLink(MLink link) {
         linkRepository.save(link);
     }
 
-    public List<Link> findAll(){
+    public List<MLink> findAll(){
         return linkRepository.findAll();
     }
 
-    public Link findByShortLink(String shortLink){
+    public MLink findByShortLink(String shortLink){
         return linkRepository.findById(shortLink).orElse(null);
     }
 
     public boolean contains(String shortLink){
-        return linkRepository.findById(shortLink).isPresent();
+        return linkRepository.existsById(shortLink);
     }
 
-    public Link updateRequestsLink(String shortLink) {
+    public MLink updateRequestsLink(String shortLink) {
         return linkRepository.updateRequestsLink(shortLink);
     }
 
-    public void updateLink(Link link) {
+    public void updateLink(MLink link) {
         linkRepository.save(link);
     }
 
-    public List<RankedLink> findSubRankedLinks(int startIndex, int count) {
+    public void updateLinks(Iterable<MLink> links){
+        linkRepository.saveAll(links);
+    }
+
+    public List<RankedLink> findSubRankedLinks(long startIndex, int count) {
         return linkRepository.findSubRankedLinks(startIndex, startIndex + count - 1);
     }
 
-//    public List<Link> findAllByName(String name){
-//        return linkRepository.findAllByName(name);
-//    }
     public RankedLink findLinkStats(String shortLink) {
         return linkRepository.findLinkStats(shortLink);
     }
