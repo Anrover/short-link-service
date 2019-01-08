@@ -1,13 +1,11 @@
 package com.example.testkontur.Controller;
 
 import java.net.URI;
+import java.util.Collection;
 
-import com.example.testkontur.Entity.Link;
-import com.example.testkontur.Entity.SimpleLink;
-import com.example.testkontur.Entity.SimpleShortLink;
+import com.example.testkontur.Entity.*;
 import com.example.testkontur.LinkStorage;
 import com.example.testkontur.RandomString;
-import com.example.testkontur.Entity.RankedLinkProjection;
 import com.example.testkontur.UrlValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 public class LinkController {
     private static final int lenShortLink = 7;
     private static final RandomString randomString = new RandomString(lenShortLink);
+    private static final String pathToRedirect = "/l/";
+
     @Autowired
     private LinkStorage storage;
 
@@ -28,18 +28,18 @@ public class LinkController {
         if (validUrl != null) {
             String shortLink;
             do {
-                shortLink = "/l/" + randomString.nextString();
+                shortLink = randomString.nextString();
             } while (storage.contains(shortLink));
             storage.createNewLink(validUrl, shortLink);
-            return ResponseEntity.ok(new SimpleShortLink(shortLink));
+            return ResponseEntity.ok(new SimpleShortLink(transformLink(shortLink)));
         }
         else
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("bad url");
     }
 
-    @RequestMapping(method=RequestMethod.GET, path = "/l/{shortLink}")
+    @RequestMapping(method=RequestMethod.GET, path = pathToRedirect + "{shortLink}")
     public ResponseEntity redirectLink(@PathVariable String shortLink) {
-        Link link = storage.getLink("/l/" + shortLink);
+        Link link = storage.getLink(shortLink);
         if (link == null)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("bad short link");
         else {
@@ -53,11 +53,15 @@ public class LinkController {
 
     @RequestMapping(method=RequestMethod.GET, path = "/stats/{shortLink}")
     public ResponseEntity getStats(@PathVariable String shortLink) {
-        RankedLinkProjection link = storage.getLinkStats("/l/" + shortLink);
+        RankedLinkProjection link = storage.getLinkStats(shortLink);
         if (link == null)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("bad short link");
         else
-            return ResponseEntity.ok(link);
+            return ResponseEntity.ok(new RankedLink(
+                    transformLink(link.getLink()),
+                    link.getOriginal(),
+                    link.getRank(),
+                    link.getCount()));
     }
 
     @RequestMapping(method=RequestMethod.GET, path = "/stats")
@@ -65,8 +69,18 @@ public class LinkController {
                                @RequestParam(value="count") int countEntities) {
         if (numPage <= 0 || countEntities <= 0 || countEntities > 100)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Bad  params");
-        else
-            return ResponseEntity.ok(storage.getSubRankedLinks(
-                    (numPage-1)*countEntities + 1, countEntities));
+        else {
+            Collection<RankedLinkProjection> linksProjections =
+                    storage.getSubRankedLinks((numPage - 1) * countEntities + 1, countEntities);
+            return ResponseEntity.ok(linksProjections.stream().map(link -> new RankedLink(
+                    transformLink(link.getLink()),
+                    link.getOriginal(),
+                    link.getRank(),
+                    link.getCount())));
+        }
+    }
+
+    private String transformLink(String shortLink) {
+        return pathToRedirect + shortLink;
     }
 }

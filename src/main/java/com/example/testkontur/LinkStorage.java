@@ -76,7 +76,7 @@ public class LinkStorage {
         linkService.createLink(link);
     }
 
-    public synchronized void updateLink(Link link, int countRequests) {
+    public synchronized void updateLink(Link link, long countRequests) {
         if(link instanceof MLink) {
             MLink mLink = (MLink) link;
             mLink.setCountRequests(countRequests);

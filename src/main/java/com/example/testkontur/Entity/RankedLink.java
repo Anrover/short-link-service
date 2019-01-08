@@ -5,10 +5,10 @@ import java.util.Objects;
 public class RankedLink implements RankedLinkProjection {
     private String link;
     private String original;
-    private int rank;
-    private int count;
+    private long rank;
+    private long count;
 
-    public RankedLink(String link, String original, int rank, int count) {
+    public RankedLink(String link, String original, long rank, long count) {
         this.link = link;
         this.original = original;
         this.rank = rank;
@@ -28,12 +28,12 @@ public class RankedLink implements RankedLinkProjection {
     }
 
     @Override
-    public int getCount() {
+    public long getCount() {
         return count;
     }
 
     @Override
-    public int getRank() {
+    public long getRank() {
         return rank;
     }
 
@@ -45,11 +45,11 @@ public class RankedLink implements RankedLinkProjection {
         this.link = link;
     }
 
-    public void setCount(int count) {
+    public void setCount(long count) {
         this.count = count;
     }
 
-    public void setRank(int rank) {
+    public void setRank(long rank) {
         this.rank = rank;
     }
 

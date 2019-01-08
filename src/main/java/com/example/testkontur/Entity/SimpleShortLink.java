@@ -14,11 +14,6 @@ public class SimpleShortLink {
     public String getLink() {
         return link;
     }
-//only for testing
-    @JsonIgnore
-    public String getId() {
-        return link.split("/")[2];
-    }
 
     public void setLink(String link) {
         this.link = link;

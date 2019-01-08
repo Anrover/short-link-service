@@ -14,7 +14,7 @@ public class MLink implements Link {
     @Column(name = "Original_Link", nullable = false)
     private String originLink;
     @Column(name = "Count_Requests", nullable = false)
-    private int countRequests;
+    private long countRequests;
 
     public MLink() {}
 
@@ -34,13 +34,13 @@ public class MLink implements Link {
 
     public String getOriginLink() {
         return originLink;
-}
+    }
 
-    public int getCountRequests() {
+    public long getCountRequests() {
         return countRequests;
     }
 
-    public void setCountRequests(int countRequests) {
+    public void setCountRequests(long countRequests) {
         this.countRequests = countRequests;
     }
 }

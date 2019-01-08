@@ -90,6 +90,10 @@ public class TestKonturApplicationTests {
 			makeRedirect(shortLink);
 	}
 
+	private String getIdFromShortLink(String shortLink) {
+		return shortLink.split("/")[2];
+	}
+
 	@Test
 	public void generateShortLinkByGoodOriginal() throws Exception {
 		mockMvc.perform(post(uriGenerate)
@@ -111,7 +115,7 @@ public class TestKonturApplicationTests {
 	public void getStatsLinkByDefault() throws Exception {
 		String uriSite = "vk.com";
 		SimpleShortLink sShortLink = generateLink(uriSite);
-		RankedLink link = getStatsLink(sShortLink.getId());
+		RankedLink link = getStatsLink(getIdFromShortLink(sShortLink.getLink()));
 		RankedLink expectedLink = new RankedLink(sShortLink.getLink(),
 				"http://" + uriSite, 1, 0);
 		assertEquals(expectedLink, link);
@@ -123,7 +127,7 @@ public class TestKonturApplicationTests {
 		int countRedirects = 10;
 		SimpleShortLink sShortLink = generateLink(uriSite);
 		makeSomeRedirects(sShortLink.getLink(), countRedirects);
-		RankedLink link = getStatsLink(sShortLink.getId());
+		RankedLink link = getStatsLink(getIdFromShortLink(sShortLink.getLink()));
 		RankedLink expectedLink = new RankedLink(sShortLink.getLink(),
 				"http://" + uriSite, 1, countRedirects);
 		assertEquals(expectedLink, link);
