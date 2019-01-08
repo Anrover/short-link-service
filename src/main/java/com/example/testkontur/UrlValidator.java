@@ -13,16 +13,12 @@ public class UrlValidator {
 
     public static Optional<String> getValidUrlIfPossible(String url) {
         try {
-            URL a = new URI(url).toURL();
-            return Optional.of(url);
+            new URI(url).toURL();
         } catch (IllegalArgumentException e) {
             url = scheme + url;
-            if (UrlPattern.matcher(url).find())
-                return Optional.of(url);
-            else
-                return Optional.empty();
         } catch (MalformedURLException | URISyntaxException e) {
             return Optional.empty();
         }
+        return UrlPattern.matcher(url).find() ? Optional.of(url) : Optional.empty();
     }
 }

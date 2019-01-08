@@ -1,48 +1,39 @@
 package com.example.testkontur;
 
-import com.example.testkontur.Entity.Link;
 import com.example.testkontur.Entity.RankedLink;
 import com.example.testkontur.Entity.SimpleLink;
 import com.example.testkontur.Entity.SimpleShortLink;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Matchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.json.JsonParseException;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest(classes = TestKonturApplication.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @WebAppConfiguration
 public class TestKonturApplicationTests {
 	private MockMvc mockMvc;
@@ -56,14 +47,47 @@ public class TestKonturApplicationTests {
 		return objectMapper.writeValueAsString(obj);
 	}
 	private <T> T mapFromJson(String json, Class<T> clazz)
-			throws JsonParseException, JsonMappingException, IOException {
+			throws JsonParseException, IOException {
 		ObjectMapper objectMapper = new ObjectMapper();
 		return objectMapper.readValue(json, clazz);
 	}
 
 	@Before
-	public void setup() throws Exception {
+	public void setup() {
 		this.mockMvc = webAppContextSetup(webApplicationContext).build();
+	}
+
+	private SimpleShortLink generateLink(String url) throws Exception {
+		MvcResult answGenerate = mockMvc.perform(post(uriGenerate)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(mapToJson(new SimpleLink(url))))
+				.andReturn();
+		return mapFromJson(answGenerate.getResponse()
+				.getContentAsString(), SimpleShortLink.class);
+	}
+
+	private RankedLink getStatsLink(String idLink) throws Exception {
+		MvcResult answStats = mockMvc.perform(get("/stats/" + idLink))
+				.andExpect(status().isOk())
+				.andReturn();
+		return mapFromJson(answStats.getResponse().getContentAsString(), RankedLink.class);
+	}
+
+	private RankedLink[] getStatsLinks(int numPage,int count) throws Exception {
+		MvcResult answStats = mockMvc
+				.perform(get(String.format("/stats?page=%d&count=%d", numPage, count)))
+				.andExpect(status().isOk())
+				.andReturn();
+		return mapFromJson(answStats.getResponse().getContentAsString(), RankedLink[].class);
+	}
+
+	private void makeRedirect(String shortLink) throws Exception {
+		mockMvc.perform(get(shortLink));
+	}
+
+	private void makeSomeRedirects(String shortLink, int count) throws Exception {
+		for (int i = 0; i < count; i++)
+			makeRedirect(shortLink);
 	}
 
 	@Test
@@ -77,8 +101,6 @@ public class TestKonturApplicationTests {
 
 	@Test
 	public void generateShortLinkByBadOriginal() throws Exception {
-//		String uri = "/generate?original=safqweqweq";
-//		mockMvc.perform(post(uri).accept(MediaType.APPLICATION_JSON_VALUE))
 		mockMvc.perform(post(uriGenerate)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
 				.content(mapToJson(new SimpleLink("varybadURLasflkqwmk"))))
@@ -86,49 +108,101 @@ public class TestKonturApplicationTests {
 	}
 
 	@Test
-	public void statsLinkByDefault() throws Exception {
-		String uriStats = "/stats/";
+	public void getStatsLinkByDefault() throws Exception {
 		String uriSite = "vk.com";
-		MvcResult answGenerate = mockMvc.perform(post(uriGenerate)
-				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapToJson(new SimpleLink(uriSite))))
-				.andReturn();
-		SimpleShortLink sShortLink = mapFromJson(answGenerate.getResponse()
-				.getContentAsString(), SimpleShortLink.class);
-		String urlGettingStats = uriStats + sShortLink.getId();
-		MvcResult answStats = mockMvc.perform(get(urlGettingStats))
-				//.accept(MediaType.APPLICATION_JSON_VALUE))
-				.andExpect(status().isOk())
-				.andReturn();
-		RankedLink link = mapFromJson(answStats.getResponse().getContentAsString(), RankedLink.class);
-		assertEquals(link.getCount(), 0);
-		assertEquals(link.getRank(), 1);
-		assertEquals(link.getOriginal(), "http://" + uriSite);
-		assertEquals(link.getLink(), sShortLink.getLink());
+		SimpleShortLink sShortLink = generateLink(uriSite);
+		RankedLink link = getStatsLink(sShortLink.getId());
+		RankedLink expectedLink = new RankedLink(sShortLink.getLink(),
+				"http://" + uriSite, 1, 0);
+		assertEquals(expectedLink, link);
 	}
 
 	@Test
-	public void statstatsLinkAfterRedirect() throws Exception {
-		String uriStats = "/stats/";
-		MvcResult answGenerate = mockMvc.perform(post(uriGenerate)
-				.content(mapToJson(Collections.singletonMap("original", "vk.com"))))
-				.andReturn();
-		String shortLink = mapFromJson(answGenerate.getResponse().getContentAsString(), String.class);
-		mockMvc.perform(get("/l/" + shortLink));
-		mockMvc.perform(get("/l/" + shortLink));
-		MvcResult answStats = mockMvc.perform(get(uriStats + shortLink)
-				.accept(MediaType.APPLICATION_JSON_VALUE))
-				.andExpect(status().isOk())
-				.andReturn();
-		RankedLink link = mapFromJson(answStats.getResponse().getContentAsString(), RankedLink.class);
-		assertEquals(link.getCount(), 2);
-		assertEquals(link.getRank(), 1);
-		assertEquals(link.getOriginal(), "http://vk.com");
-		assertEquals(link.getLink(), shortLink);
+	public void getStatsLinkAfterRedirect() throws Exception {
+		String uriSite = "pikabu.ru";
+		int countRedirects = 10;
+		SimpleShortLink sShortLink = generateLink(uriSite);
+		makeSomeRedirects(sShortLink.getLink(), countRedirects);
+		RankedLink link = getStatsLink(sShortLink.getId());
+		RankedLink expectedLink = new RankedLink(sShortLink.getLink(),
+				"http://" + uriSite, 1, countRedirects);
+		assertEquals(expectedLink, link);
 	}
 
+	@Test
+	public void checkRedirect() throws Exception{
+		String uriSite = "pikabu.ru";
+		SimpleShortLink sShortLink = generateLink(uriSite);
+		mockMvc.perform(get(sShortLink.getLink()))
+				.andExpect(status().isMovedPermanently());
+	}
 
+	@Test
+	public void getStatsLinksOnPage() throws Exception {
+		int numPage = 1;
+		int count = 2;
+		String uri1 = "vk.com";
+		String uri2 = "pikabu.ru";
+		int countRedirects2 = 15;
+		String uri3 = "https://kontur.ru";
+		int countRedirects3 = 10;
+		SimpleShortLink sShortLink1 = generateLink(uri1);
+		SimpleShortLink sShortLink2 = generateLink(uri2);
+		SimpleShortLink sShortLink3 = generateLink(uri3);
+		makeSomeRedirects(sShortLink3.getLink(), countRedirects3);
+		makeSomeRedirects(sShortLink2.getLink(), countRedirects2);
+		RankedLink[] links = getStatsLinks(numPage, count);
+		RankedLink[] expectedLinks = new RankedLink[] {
+				new RankedLink(sShortLink2.getLink(),
+						"http://" + uri2, 1, 15),
+				new RankedLink(sShortLink3.getLink(),
+						uri3, 2, 10)
+		};
+		assertTrue(Arrays.equals(links, expectedLinks));
+	}
 
+	@Test
+	public void getStatsLinksOnPage_countIsBiggerThanCountLinks() throws Exception {
+		int numPage = 1;
+		int count = 10;
+		String uri1 = "vk.com";
+		String uri2 = "pikabu.ru";
+		int countRedirects2 = 15;
+		String uri3 = "https://kontur.ru";
+		int countRedirects3 = 10;
+		SimpleShortLink sShortLink1 = generateLink(uri1);
+		SimpleShortLink sShortLink2 = generateLink(uri2);
+		SimpleShortLink sShortLink3 = generateLink(uri3);
+		makeSomeRedirects(sShortLink3.getLink(), countRedirects3);
+		makeSomeRedirects(sShortLink2.getLink(), countRedirects2);
+		RankedLink[] links = getStatsLinks(numPage, count);
+		RankedLink[] expectedLinks = new RankedLink[] {
+				new RankedLink(sShortLink2.getLink(),
+						"http://" + uri2, 1, 15),
+				new RankedLink(sShortLink3.getLink(),
+						uri3, 2, 10),
+				new RankedLink(sShortLink1.getLink(),
+						"http://" + uri1, 3, 0)
+		};
+		assertTrue(Arrays.equals(links, expectedLinks));
+	}
 
+	@Test
+	public void getStatsLinksOnPage_ExpectEmptyArray() throws Exception {
+		int numPage = 4;
+		int count = 10;
+		String uri1 = "vk.com";
+		String uri2 = "pikabu.ru";
+		int countRedirects2 = 15;
+		String uri3 = "https://kontur.ru";
+		int countRedirects3 = 10;
+		SimpleShortLink sShortLink1 = generateLink(uri1);
+		SimpleShortLink sShortLink2 = generateLink(uri2);
+		SimpleShortLink sShortLink3 = generateLink(uri3);
+		makeSomeRedirects(sShortLink3.getLink(), countRedirects3);
+		makeSomeRedirects(sShortLink2.getLink(), countRedirects2);
+		RankedLink[] links = getStatsLinks(numPage, count);
+		assertTrue(links.length == 0);
+	}
 }
 

@@ -3,7 +3,7 @@ package com.example.testkontur;
 
 import com.example.testkontur.Entity.Link;
 import com.example.testkontur.Entity.MLink;
-import com.example.testkontur.Entity.RankedLink;
+import com.example.testkontur.Entity.RankedLinkProjection;
 import com.example.testkontur.Service.LinkService;
 
 import java.util.HashMap;
@@ -24,6 +24,7 @@ public class LinkStorage {
     }
 
     public LinkStorage(LinkService linkService, int cacheSize) {
+        if (cacheSize < 1) throw new IllegalArgumentException();
         this.linkService = linkService;
         cache = new LinkedHashMap<String, MLink>(cacheSize, 0.75f, true) {
             @Override
@@ -51,16 +52,12 @@ public class LinkStorage {
         }
     }
 
-    public synchronized RankedLink getLinkStats(String shortLink) {
+    public synchronized RankedLinkProjection getLinkStats(String shortLink) {
         synhronizeData();
         return linkService.findLinkStats(shortLink);
     }
 
-    public synchronized MLink updateRequestsLink(String shortLink, int countRequests) {
-        return linkService.updateRequestsLink(shortLink);
-    }
-
-    public synchronized List<RankedLink> getSubRankedLinks(int startIndex, int count) {
+    public synchronized List<RankedLinkProjection> getSubRankedLinks(int startIndex, int count) {
         synhronizeData();
         return linkService.findSubRankedLinks(startIndex, count);
     }
@@ -76,7 +73,6 @@ public class LinkStorage {
 
     public synchronized void createNewLink(String originLink, String shortLink) {
         MLink link = new MLink(originLink, shortLink);
-        System.out.println(link.getShortLink());
         linkService.createLink(link);
     }
 

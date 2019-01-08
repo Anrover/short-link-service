@@ -1,7 +1,7 @@
 package com.example.testkontur.Service;
 
 import com.example.testkontur.Entity.MLink;
-import com.example.testkontur.Entity.RankedLink;
+import com.example.testkontur.Entity.RankedLinkProjection;
 import com.example.testkontur.Repository.LinkRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,10 +33,6 @@ public class LinkService {
         return linkRepository.existsById(shortLink);
     }
 
-    public MLink updateRequestsLink(String shortLink) {
-        return linkRepository.updateRequestsLink(shortLink);
-    }
-
     public void updateLink(MLink link) {
         linkRepository.save(link);
     }
@@ -45,11 +41,11 @@ public class LinkService {
         linkRepository.saveAll(links);
     }
 
-    public List<RankedLink> findSubRankedLinks(long startIndex, int count) {
+    public List<RankedLinkProjection> findSubRankedLinks(long startIndex, int count) {
         return linkRepository.findSubRankedLinks(startIndex, startIndex + count - 1);
     }
 
-    public RankedLink findLinkStats(String shortLink) {
+    public RankedLinkProjection findLinkStats(String shortLink) {
         return linkRepository.findLinkStats(shortLink);
     }
 }

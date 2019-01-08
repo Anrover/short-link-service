@@ -1,13 +1,13 @@
 package com.example.testkontur.Controller;
 
 import java.net.URI;
-import java.util.Collections;
 
 import com.example.testkontur.Entity.Link;
 import com.example.testkontur.Entity.SimpleLink;
+import com.example.testkontur.Entity.SimpleShortLink;
 import com.example.testkontur.LinkStorage;
 import com.example.testkontur.RandomString;
-import com.example.testkontur.Entity.RankedLink;
+import com.example.testkontur.Entity.RankedLinkProjection;
 import com.example.testkontur.UrlValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -22,8 +22,7 @@ public class LinkController {
     @Autowired
     private LinkStorage storage;
 
-    @RequestMapping(method=RequestMethod.POST, path = "/generate")//, produces = MediaType.APPLICATION_JSON_VALUE)// change to Post
-    //public ResponseEntity getShortLink(@RequestParam(value="original") String originLink) {
+    @RequestMapping(method=RequestMethod.POST, path = "/generate")
         public ResponseEntity getShortLink(@RequestBody SimpleLink link) {
         String validUrl = UrlValidator.getValidUrlIfPossible(link.getOriginal()).orElse(null);
         if (validUrl != null) {
@@ -32,7 +31,7 @@ public class LinkController {
                 shortLink = "/l/" + randomString.nextString();
             } while (storage.contains(shortLink));
             storage.createNewLink(validUrl, shortLink);
-            return ResponseEntity.ok(Collections.singletonMap("link", shortLink));
+            return ResponseEntity.ok(new SimpleShortLink(shortLink));
         }
         else
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("bad url");
@@ -52,9 +51,9 @@ public class LinkController {
         }
     }
 
-    @RequestMapping(method=RequestMethod.GET, path = "/stats/{shortLink}")//, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(method=RequestMethod.GET, path = "/stats/{shortLink}")
     public ResponseEntity getStats(@PathVariable String shortLink) {
-        RankedLink link = storage.getLinkStats("/l/" + shortLink);
+        RankedLinkProjection link = storage.getLinkStats("/l/" + shortLink);
         if (link == null)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("bad short link");
         else
@@ -66,10 +65,8 @@ public class LinkController {
                                @RequestParam(value="count") int countEntities) {
         if (numPage <= 0 || countEntities <= 0 || countEntities > 100)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Bad  params");
-        else {
+        else
             return ResponseEntity.ok(storage.getSubRankedLinks(
-                    (numPage-1)*countEntities + 1, countEntities
-            ));
-        }
+                    (numPage-1)*countEntities + 1, countEntities));
     }
 }
